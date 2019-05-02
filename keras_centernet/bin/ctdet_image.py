@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import cv2
 import numpy as np
@@ -39,7 +40,7 @@ def main():
   detections = model.predict(pimg)[0]
   for d in detections:
     x1, y1, x2, y2, score, cl = d
-    if score < 0.001:
+    if score < 0.3:
       break
     x1, y1, x2, y2 = letterbox_transformer.correct_box(x1, y1, x2, y2)
     x1, y1, x2, y2, cl = int(x1.round()), int(y1.round()), int(x2.round()), int(y2.round()), int(cl)

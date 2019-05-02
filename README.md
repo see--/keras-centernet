@@ -37,17 +37,25 @@ Detection identifies objects as axis-aligned boxes in an image. Most successful 
     Or start a docker container. Note that [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) is required:
     ```
     docker build -t keras_centernet:latest -f Dockerfile .
-    docker run --runtime=nvidia -v $PWD:/keras_centernet -w /keras_centernet -it --rm keras_centernet:latest
+    docker run --runtime=nvidia -v $PWD:/keras-centernet -w /keras-centernet -it --rm keras_centernet:latest
     ```
 
 4. Run the demo on an image:
     ```
-    python src/ctdet_predict_image.py --fn assets/demo.jpg
+    python keras_centernet/bin/ctdet_image.py --fn assets/demo.jpg --inres 384,384
     ```
 
-    Or use a video / webcam as input:
+    Or use a video as input. You can re-create the demo video like this:
     ```
-    python src/ctdet_predict_video.py --video webcam
+    mkdir -p output
+    youtube-dl  -f 137 https://www.youtube.com/watch?v=tHRLX8jRjq8 --output output/skyfall.mp4
+    python keras_centernet/bin/ctdet_video.py --inres 384,384 --video output/skyfall.mp4
+    ```
+
+## Tests
+    ```
+    PYTHONPATH=. pytest .
+    PYTHONPATH=. python tests/letterbox_test.py
     ```
 
 

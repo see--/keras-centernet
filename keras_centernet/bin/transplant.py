@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from collections import defaultdict
 from keras.layers import BatchNormalization, Conv2D, Activation
 from lib.models.networks.hourglass import HourglassNetwork

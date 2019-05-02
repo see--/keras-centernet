@@ -29,10 +29,12 @@ def test_hourglass_predict():
   pimg = np.expand_dims(normalize_image(img), 0)
   output = model.predict(pimg)
   hm, reg, wh = output[3:]
+  from IPython import embed; embed()
   assert hm.shape == hm_gold.shape
   assert reg.shape == reg_gold.shape
   assert wh.shape == wh_gold.shape
 
 
 if __name__ == '__main__':
+  test_hourglass_predict()
   pytest.main([__file__])

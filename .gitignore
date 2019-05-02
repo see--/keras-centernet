@@ -4,3 +4,5 @@ paper
 .pytest_cache
 output
 repo
+annotations
+val2017

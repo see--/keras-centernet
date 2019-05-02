@@ -15,6 +15,7 @@ def _nms(heat, kernel=3):
 
 
 def _ctdet_decode(hm, reg, wh, k=100, output_stride=4):
+  hm = K.sigmoid(hm)
   hm = _nms(hm)
   hm_shape = K.shape(hm)
   reg_shape = K.shape(reg)
@@ -25,7 +26,7 @@ def _ctdet_decode(hm, reg, wh, k=100, output_stride=4):
   reg_flat = K.reshape(reg, (reg_shape[0], -1, reg_shape[-1]))
   wh_flat = K.reshape(wh, (wh_shape[0], -1, wh_shape[-1]))
 
-  def _process_batch(args):
+  def _process_sample(args):
     _hm, _reg, _wh = args
     _scores, _inds = tf.math.top_k(_hm, k=100, sorted=True)
     _classes = K.cast(_inds % cat, 'float32')
@@ -50,7 +51,7 @@ def _ctdet_decode(hm, reg, wh, k=100, output_stride=4):
     _detection = K.stack([_x1, _y1, _x2, _y2, _scores, _classes], -1)
     return _detection
 
-  detections = K.map_fn(_process_batch, [hm_flat, reg_flat, wh_flat], dtype=K.floatx())
+  detections = K.map_fn(_process_sample, [hm_flat, reg_flat, wh_flat], dtype=K.floatx())
   return detections
 
 
