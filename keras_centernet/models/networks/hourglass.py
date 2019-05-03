@@ -33,7 +33,9 @@ def normalize_image(image):
   # Returns
     float32 image with the same shape as the input
   """
-  return ((np.float32(image) / 255.) - [0.408, 0.447, 0.47]) / [0.289, 0.274, 0.278]
+  mean = [0.40789655, 0.44719303, 0.47026116]
+  std = [0.2886383, 0.27408165, 0.27809834]
+  return ((np.float32(image) / 255.) - mean) / std
 
 
 def HourglassNetwork(heads, num_stacks, cnv_dim=256, inres=(512, 512), weights='coco', dims=[256, 384, 384, 384, 512]):

@@ -29,8 +29,12 @@ def main():
   parser.add_argument('--data', default='val2017', type=str)
   parser.add_argument('--annotations', default='annotations', type=str)
   parser.add_argument('--inres', default='512,512', type=str)
+  parser.add_argument('--no-full-resolution', action='store_true')
   args, _ = parser.parse_known_args()
   args.inres = tuple(int(x) for x in args.inres.split(','))
+  if not args.no_full_resolution:
+    args.inres = (None, None)
+
   os.makedirs(args.output, exist_ok=True)
   kwargs = {
     'num_stacks': 2,
@@ -46,7 +50,11 @@ def main():
   out_fn_box = os.path.join(args.output, args.data + '_bbox_results_%s_%s.json' % (args.inres[0], args.inres[1]))
   model = HourglassNetwork(heads=heads, **kwargs)
   model = CtDetDecode(model)
-  letterbox_transformer = LetterboxTransformer(args.inres[0], args.inres[1])
+  if args.no_full_resolution:
+    letterbox_transformer = LetterboxTransformer(args.inres[0], args.inres[1])
+  else:
+    letterbox_transformer = LetterboxTransformer(mode='testing', max_stride=128)
+
   fns = sorted(glob(os.path.join(args.data, '*.jpg')))
   results = []
   for fn in tqdm(fns):
@@ -61,7 +69,8 @@ def main():
       # if score < 0.001:
       #   break
       x1, y1, x2, y2 = letterbox_transformer.correct_box(x1, y1, x2, y2)
-      x1, y1, x2, y2, cl = int(x1.round()), int(y1.round()), int(x2.round()), int(y2.round()), int(cl)
+      cl = int(cl)
+      x1, y1, x2, y2 = float(x1), float(y1), float(x2), float(y2)
       image_result = {
         'image_id': image_id,
         'category_id': COCO_IDS[cl + 1],

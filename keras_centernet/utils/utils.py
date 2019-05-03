@@ -35,12 +35,12 @@ class COCODrawer:
     h = img.shape[0]
     width = max(1, int(h * 0.006))
     name = self.coco_names[cl].split()[-1]
-    bgr_color = get_rgb_color(cl, len(self.coco_names))  # [::-1]
+    bgr_color = get_rgb_color(cl, len(self.coco_names))[::-1]
     # bounding box
     cv2.rectangle(img, (x1, y1), (x2, y2), bgr_color, width)
     # font background
     font_width = len(name) * self.char_width
-    cv2.rectangle(img, (x1 - width // 2, y1 - self.font_size), (x1 + font_width, y1), bgr_color, -1)
+    cv2.rectangle(img, (x1 - math.ceil(width / 2), y1 - self.font_size), (x1 + font_width, y1), bgr_color, -1)
     # text
     pil_img = Image.fromarray(img[..., ::-1])
     draw = ImageDraw.Draw(pil_img)

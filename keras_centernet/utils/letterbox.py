@@ -2,9 +2,8 @@ import cv2
 import numpy as np
 
 
-def letterbox_image(image, output_height, output_width):
+def training_transform(height, width, output_height, output_width):
   # https://docs.opencv.org/2.4/doc/tutorials/imgproc/imgtrans/warp_affine/warp_affine.html
-  height, width = image.shape[:2]
   height_scale, width_scale = output_height / height, output_width / width
   scale = min(height_scale, width_scale)
   resize_height, resize_width = round(height * scale), round(width * scale)
@@ -13,10 +12,17 @@ def letterbox_image(image, output_height, output_width):
   A = np.float32([[scale, 0.0], [0.0, scale]])
   B = np.float32([[pad_left], [pad_top]])
   M = np.hstack([A, B])
-  # https://answers.opencv.org/question/33516/cv2warpaffine-results-in-an-image-shifted-by-05-pixel
-  # This is different from `cv2.resize(image, (resize_width, resize_height))` & pad
-  letterbox = cv2.warpAffine(image, M, (output_width, output_height))
-  return letterbox, M
+  return M, output_height, output_width
+
+
+def testing_transform(height, width, max_stride):
+  h_pad, w_pad = round(height / max_stride + 0.51) * max_stride, round(width / max_stride + 0.51) * max_stride
+  pad_left = (w_pad - width) // 2
+  pad_top = (h_pad - height) // 2
+  A = np.eye(2, dtype='float32')
+  B = np.float32([[pad_left], [pad_top]])
+  M = np.hstack([A, B])
+  return M, h_pad, w_pad
 
 
 def invert_transform(M):
@@ -34,14 +40,28 @@ def affine_transform_coords(coords, M):
 
 
 class LetterboxTransformer:
-  def __init__(self, height, width):
+  def __init__(self, height=None, width=None, mode='training', max_stride=128):
+    """Resize the input images. For `mode='training'` the resolution is fixed to `height` x `width`.
+       The resolution is changed but the aspect ratio is kept.
+       In `mode='testing'` the input is padded to the next bigger multiple of `max_stride` of the network.
+       The orginal resolutions is thus kept."""
     self.height = height
     self.width = width
+    self.mode = mode
+    self.max_stride = max_stride
     self.M = None
     self.M_inv = None
 
   def __call__(self, image):
-    letterbox, M = letterbox_image(image, self.height, self.width)
+    h, w = image.shape[:2]
+    if self.mode == 'training':
+      M, h_out, w_out = training_transform(h, w, self.height, self.width)
+    elif self.mode == 'testing':
+      M, h_out, w_out = testing_transform(h, w, self.max_stride)
+
+    # https://answers.opencv.org/question/33516/cv2warpaffine-results-in-an-image-shifted-by-05-pixel
+    # This is different from `cv2.resize(image, (resize_width, resize_height))` & pad
+    letterbox = cv2.warpAffine(image, M, (w_out, h_out))
     self.M = M
     self.M_inv = invert_transform(M)
     return letterbox

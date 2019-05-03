@@ -40,9 +40,9 @@ Right now, this repository supports 2D object detection. Hopefully, the other ta
     docker run --runtime=nvidia -v $PWD:/keras-centernet -w /keras-centernet -it --rm keras_centernet:latest
     ```
 
-4. Run the demo on an image:
+4. Run the CenterNet on an image:
     ```
-    python keras_centernet/bin/ctdet_image.py --fn assets/demo.jpg --inres 384,384
+    PYTHONPATH=. python keras_centernet/bin/ctdet_image.py --fn assets/demo.jpg --inres 512,512
     ```
 
     Or use a video as input. You can re-create the demo video like this:
