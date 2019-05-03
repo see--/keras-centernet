@@ -7,7 +7,7 @@ np.random.seed(32)
 
 def load_input_gold():
   inp = cv2.imread('tests/data/input.png')
-  gold = cv2.imread('tests/data/gold.png')
+  gold = cv2.imread('tests/data/letterbox_gold.png')
   return inp, gold
 
 

@@ -32,12 +32,13 @@ def _ctdet_decode(hm, reg, wh, k=100, output_stride=4):
     _classes = K.cast(_inds % cat, 'float32')
     _inds = K.cast(_inds / cat, 'int32')
     _xs = K.cast(_inds % width, 'float32')
-    _ys = K.cast(_inds / width, 'float32')
+    _ys = K.cast(K.cast(_inds / width, 'int32'), 'float32')
     _wh = K.gather(_wh, _inds)
     _reg = K.gather(_reg, _inds)
 
     _xs = _xs + _reg[..., 0]
     _ys = _ys + _reg[..., 1]
+
     _x1 = _xs - _wh[..., 0] / 2
     _y1 = _ys - _wh[..., 1] / 2
     _x2 = _xs + _wh[..., 0] / 2

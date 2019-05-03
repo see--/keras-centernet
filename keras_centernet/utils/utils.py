@@ -25,25 +25,25 @@ def get_rgb_color(cls, clses):
 
 
 class COCODrawer:
-  def __init__(self, width=6, font_size=24, font="assets/Roboto-Regular.ttf", char_width=15):
+  def __init__(self, font_size=24, font="assets/Roboto-Regular.ttf", char_width=14):
     self.coco_names = coco_names
-    self.width = width
     self.font_size = font_size
     self.font = ImageFont.truetype(font, font_size)
     self.char_width = char_width
 
   def draw_box(self, img, x1, y1, x2, y2, cl):
+    h = img.shape[0]
+    width = max(1, int(h * 0.006))
     name = self.coco_names[cl].split()[-1]
-    bgr_color = get_rgb_color(cl, len(self.coco_names))[::-1]
+    bgr_color = get_rgb_color(cl, len(self.coco_names))  # [::-1]
     # bounding box
-    cv2.rectangle(img, (x1, y1), (x2, y2), bgr_color, self.width)
+    cv2.rectangle(img, (x1, y1), (x2, y2), bgr_color, width)
     # font background
     font_width = len(name) * self.char_width
-    cv2.rectangle(img, (x1 - self.width // 2, y1 - self.font_size), (min(x1 + font_width, x2 + self.width // 2), y1),
-                  bgr_color, -1)
+    cv2.rectangle(img, (x1 - width // 2, y1 - self.font_size), (x1 + font_width, y1), bgr_color, -1)
     # text
     pil_img = Image.fromarray(img[..., ::-1])
     draw = ImageDraw.Draw(pil_img)
-    draw.text((x1 + self.width, y1 - self.font_size), name, font=self.font, fill=(0, 0, 0, 255))
+    draw.text((x1 + width, y1 - self.font_size), name, font=self.font, fill=(0, 0, 0, 255))
     img = np.array(pil_img)[..., ::-1].copy()
     return img

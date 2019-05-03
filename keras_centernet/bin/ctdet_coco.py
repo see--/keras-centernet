@@ -44,15 +44,11 @@ def main():
     'wh': 2
   }
   out_fn_box = os.path.join(args.output, args.data + '_bbox_results_%s_%s.json' % (args.inres[0], args.inres[1]))
-  out_fn_image_ids = os.path.join(args.output, args.data + '_processed_image_ids_%s_%s.json' % (
-    args.inres[0], args.inres[1]))
-
   model = HourglassNetwork(heads=heads, **kwargs)
   model = CtDetDecode(model)
   letterbox_transformer = LetterboxTransformer(args.inres[0], args.inres[1])
   fns = sorted(glob(os.path.join(args.data, '*.jpg')))
   results = []
-  image_ids = []
   for fn in tqdm(fns):
     img = cv2.imread(fn)
     image_id = int(os.path.splitext(os.path.basename(fn))[0])
@@ -73,7 +69,6 @@ def main():
         'bbox': [x1, y1, (x2 - x1), (y2 - y1)],
       }
       results.append(image_result)
-    image_ids.append(image_id)
 
   if not len(results):
     print("No predictions were generated.")
@@ -82,9 +77,7 @@ def main():
   # write output
   with open(out_fn_box, 'w') as f:
     json.dump(results, f, indent=2)
-  with open(out_fn_image_ids, 'w') as f:
-    json.dump(image_ids, f, indent=2)
-  print("Predictions saved to: %s & %s" % (out_fn_box, out_fn_image_ids))
+  print("Predictions saved to: %s" % out_fn_box)
   # load results in COCO evaluation tool
   gt_fn = os.path.join(args.annotations, 'instances_%s.json' % args.data)
   print("Loading GT: %s" % gt_fn)
@@ -93,7 +86,6 @@ def main():
 
   # run COCO evaluation
   coco_eval = COCOeval(coco_true, coco_pred, 'bbox')
-  coco_eval.params.imgIds = image_ids
   coco_eval.evaluate()
   coco_eval.accumulate()
   coco_eval.summarize()
