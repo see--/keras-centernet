@@ -1,46 +1,61 @@
 #!/usr/bin/env python3
 from collections import defaultdict
 from keras.layers import BatchNormalization, Conv2D, Activation
-from lib.models.networks.hourglass import HourglassNetwork
+from keras_centernet.models.networks.hourglass import HourglassNetwork
 import sys
 import os
+import argparse
 import torch as th
-sys.path.append(os.path.expanduser('~/Pytorch/CenterNet/src/lib/models/networks'))
-pytorch_weight_path = os.path.expanduser('~/Pytorch/CenterNet/src/hg_weights.pth')
-keras_weight_path = 'ctdet_coco_hg.hdf5'
-from large_hourglass import HourglassNet  # noqa
+sys.path.append(os.path.expanduser('~/Pytorch/CenterNet/src/lib/models'))
+from model import load_model  # noqa
+from networks.large_hourglass import HourglassNet  # noqa
 
 
-def convert_state_dict(state_dict):
-  _state_dict = {}
-  # convert data_parallal to model
-  for k in state_dict:
-    if k.startswith('module') and not k.startswith('module_list'):
-      _state_dict[k[7:]] = state_dict[k]
-    else:
-      _state_dict[k] = state_dict[k]
-  return _state_dict
-
-
-def get_pymodel():
-  pymodel = HourglassNet({'hm': 80, 'reg': 2, 'wh': 2}, 2)
-  pymodel.load_state_dict(th.load(pytorch_weight_path))
+def get_pymodel(heads, weight_path):
+  pymodel = HourglassNet(heads, 2)
+  pymodel = load_model(pymodel, weight_path)
   print("PyTorch Weights loaded")
   return pymodel
 
 
-if __name__ == '__main__':
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--task', type=str, default='hpdet')
+  parser.add_argument('--set-weights', action='store_true')
+  args, _ = parser.parse_known_args()
+
+  if not args.set_weights:
+    print("Dry run for: %s" % args.task)
+  else:
+    print("Setting weights for: %s" % args.task)
+
+  if args.task == 'ctdet':
+    pytorch_weight_path = os.path.expanduser('~/Pytorch/CenterNet/models/ctdet_coco_hg.pth')
+  else:
+    pytorch_weight_path = os.path.expanduser('~/Pytorch/CenterNet/models/hpdet_coco_hg.pth')
+  keras_weight_path = '%s_coco_hg.hdf5' % args.task
+
   kwargs = {
     'num_stacks': 2,
-    'num_channels': 256,
+    'cnv_dim': 256,
     'inres': (512, 512),
+    'weights': None,
   }
-  heads = {
-    'hm': 80,
-    'reg': 2,
-    'wh': 2
-  }
-
+  if args.task == 'ctdet':
+    heads = {
+      'hm': 80,
+      'reg': 2,
+      'wh': 2
+    }
+  elif args.task == 'hpdet':
+    heads = {
+      'hm': 1,
+      'hm_hp': 17,
+      'hp_offset': 2,
+      'hps': 34,
+      'reg': 2,
+      'wh': 2,
+    }
   model = HourglassNetwork(heads=heads, **kwargs)
   print("Keras model loaded")
   # count layers
@@ -48,7 +63,7 @@ if __name__ == '__main__':
   num_bn_keras = sum(1 for l in model.layers if isinstance(l, BatchNormalization))
   num_relu_keras = sum(1 for l in model.layers if isinstance(l, Activation))
 
-  pymodel = get_pymodel()
+  pymodel = get_pymodel(heads, pytorch_weight_path)
   print("PyTorch model loaded")
   num_conv_pytorch = 0
   num_bn_pytorch = 0
@@ -151,7 +166,8 @@ if __name__ == '__main__':
 
       print("Found match: %-55s -> %-55s, %-55s" % (layer_name, base, layer_names_))
       matched_names.append(layer_name)
-      layer.set_weights(set_weights)
+      if args.set_weights:
+        layer.set_weights(set_weights)
     else:
       unmatched_names.append(layer_name)
 
@@ -167,3 +183,7 @@ if __name__ == '__main__':
 
   model.save_weights(keras_weight_path)
   print("Wrote keras weights to %s" % keras_weight_path)
+
+
+if __name__ == '__main__':
+  main()

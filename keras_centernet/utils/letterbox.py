@@ -71,3 +71,7 @@ class LetterboxTransformer:
     coords = affine_transform_coords(coords, self.M_inv)
     x1, y1, x2, y2 = coords[0, 0], coords[1, 0], coords[0, 1], coords[1, 1]
     return x1, y1, x2, y2
+
+  def correct_coords(self, coords):
+    coords = affine_transform_coords(coords, self.M_inv)
+    return coords

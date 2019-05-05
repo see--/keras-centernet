@@ -11,16 +11,8 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
 from keras_centernet.models.networks.hourglass import HourglassNetwork, normalize_image
-from keras_centernet.models.decode import CtDetDecode
+from keras_centernet.models.decode import HpDetDecode
 from keras_centernet.utils.letterbox import LetterboxTransformer
-
-# https://github.com/keras-team/keras-contrib/blob/master/keras_contrib/datasets/coco.py
-COCO_IDS = [0,
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17,
-            18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36,
-            37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53,
-            54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73,
-            74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
 
 
 def main():
@@ -39,17 +31,21 @@ def main():
   kwargs = {
     'num_stacks': 2,
     'cnv_dim': 256,
-    'weights': 'ctdet_coco',
+    'weights': 'hpdet_coco',
     'inres': args.inres,
   }
   heads = {
-    'hm': 80,
-    'reg': 2,
-    'wh': 2
+    'hm': 1,  # 6
+    'hm_hp': 17,  # 7
+    'hp_offset': 2,  # 8
+    'hps': 34,  # 9
+    'reg': 2,  # 10
+    'wh': 2,  # 11
   }
-  out_fn_box = os.path.join(args.output, args.data + '_bbox_results_%s_%s.json' % (args.inres[0], args.inres[1]))
+  out_fn_keypoints = os.path.join(args.output, args.data + '_keypoints_results_%s_%s.json' % (
+      args.inres[0], args.inres[1]))
   model = HourglassNetwork(heads=heads, **kwargs)
-  model = CtDetDecode(model)
+  model = HpDetDecode(model)
   if args.no_full_resolution:
     letterbox_transformer = LetterboxTransformer(args.inres[0], args.inres[1])
   else:
@@ -65,17 +61,25 @@ def main():
     pimg = np.expand_dims(pimg, 0)
     detections = model.predict(pimg)[0]
     for d in detections:
-      x1, y1, x2, y2, score, cl = d
-      # if score < 0.001:
-      #   break
+      score = d[4]
+      x1, y1, x2, y2 = d[:4]
       x1, y1, x2, y2 = letterbox_transformer.correct_box(x1, y1, x2, y2)
-      cl = int(cl)
       x1, y1, x2, y2 = float(x1), float(y1), float(x2), float(y2)
+
+      kps = d[5:-1]
+      kps_x = kps[:17]
+      kps_y = kps[17:]
+      kps = letterbox_transformer.correct_coords(np.vstack([kps_x, kps_y])).T
+      # add z = 1
+      kps = np.concatenate([kps, np.ones((17, 1), dtype='float32')], -1)
+      kps = list(map(float, kps.flatten()))
+
       image_result = {
         'image_id': image_id,
-        'category_id': COCO_IDS[cl + 1],
+        'category_id': 1,
         'score': float(score),
         'bbox': [x1, y1, (x2 - x1), (y2 - y1)],
+        'keypoints': kps,
       }
       results.append(image_result)
 
@@ -84,20 +88,19 @@ def main():
     return
 
   # write output
-  with open(out_fn_box, 'w') as f:
+  with open(out_fn_keypoints, 'w') as f:
     json.dump(results, f, indent=2)
-  print("Predictions saved to: %s" % out_fn_box)
+  print("Predictions saved to: %s" % out_fn_keypoints)
   # load results in COCO evaluation tool
-  gt_fn = os.path.join(args.annotations, 'instances_%s.json' % args.data)
+  gt_fn = os.path.join(args.annotations, 'person_keypoints_%s.json' % args.data)
   print("Loading GT: %s" % gt_fn)
   coco_true = COCO(gt_fn)
-  coco_pred = coco_true.loadRes(out_fn_box)
-
-  # run COCO evaluation
-  coco_eval = COCOeval(coco_true, coco_pred, 'bbox')
+  coco_pred = coco_true.loadRes(out_fn_keypoints)
+  coco_eval = COCOeval(coco_true, coco_pred, 'keypoints')
   coco_eval.evaluate()
   coco_eval.accumulate()
   coco_eval.summarize()
+
   return coco_eval.stats
 
 

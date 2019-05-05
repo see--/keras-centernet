@@ -19,7 +19,7 @@ CenterNet is a meta-algorithm for all kind of object detection related tasks. Th
 - No bounding box matching
 - No non maximum suppression
 
-Right now, this repository supports 2D object detection. Hopefully, the other tasks will be added soon.
+Right now, this repository supports 2D object detection and human pose estimation. Hopefully, 3D object detection will be added soon.
 
 
 ## Quick Start
@@ -51,7 +51,7 @@ Right now, this repository supports 2D object detection. Hopefully, the other ta
     PYTHONPATH=. python keras_centernet/bin/ctdet_video.py --inres 512,512 --video output/skyfall.mp4
     ```
 
-    Refer to `COCO.md` if you want to reproduce the 2D object detection results and to `KITTI.md` for 3D object detection.
+    Refer to [COCO.md](https://github.com/see--/keras-centernet/blob/master/COCO.md) if you want to reproduce the 2D object detection results and to [POSE.md](https://github.com/see--/keras-centernet/blob/master/POSE.md) for human pose estimation.
 
 ## Demo Video
 <p align="center"> 
@@ -60,9 +60,6 @@ Right now, this repository supports 2D object detection. Hopefully, the other ta
   </a>
 </p>
 
-## Tests:
-
-    PYTHONPATH=. pytest .
 
 ## Official PyTorch Implementation
 - By Xingyi Zhou: https://github.com/xingyizhou/CenterNet

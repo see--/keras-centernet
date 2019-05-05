@@ -22,7 +22,7 @@ def test_hourglass_predict():
   kwargs = {
     'num_stacks': 2,
     'cnv_dim': 256,
-    'weights': 'coco',
+    'weights': 'ctdet_coco',
     'inres': (256, 256),
   }
   heads = {
@@ -44,7 +44,7 @@ def test_hourglass_output():
   kwargs = {
     'num_stacks': 2,
     'cnv_dim': 256,
-    'weights': 'coco',
+    'weights': 'ctdet_coco',
     'inres': (256, 256),
   }
   heads = {

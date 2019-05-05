@@ -1,3 +1,11 @@
+# Object detection on an image
+```
+    PYTHONPATH=. python keras_centernet/bin/ctdet_image.py --fn assets/demo.jpg --inres 512,512
+```
+<p align="center"> 
+  <img src="assets/out.demo.jpg">
+</p>
+
 # Reproducing COCO AP scores
 
 ## Get the data
@@ -33,6 +41,8 @@ PYTHONPATH=. python keras_centernet/bin/ctdet_coco.py --data val2017 --annotatio
 
 * Fixed resolution 512,512: 615s -> 123ms/image
 ```
+PYTHONPATH=. python keras_centernet/bin/ctdet_coco.py --data val2017 --annotations annotations --inres 512,512 --no-full-resolution
+
  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.392
  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.576
  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.424
@@ -45,6 +55,20 @@ PYTHONPATH=. python keras_centernet/bin/ctdet_coco.py --data val2017 --annotatio
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.325
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.570
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.716
+
+ # Reg fixed at 0.5
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.372
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.567
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.395
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.170
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.403
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.552
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.311
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.488
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.508
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.278
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.551
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.712
 ```
 
 * Full resolution, `mode='testing'`: 764s -> 153ms/image

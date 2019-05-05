@@ -21,9 +21,13 @@ import keras.backend as K
 import numpy as np
 
 
-COCO_WEIGTHS_PATH = (
+CTDET_COCO_WEIGHTS_PATH = (
   'https://github.com/see--/keras-centernet/'
   'releases/download/0.1.0/ctdet_coco_hg.hdf5')
+
+HPDET_COCO_WEIGHTS_PATH = (
+  'https://github.com/see--/keras-centernet/'
+  'releases/download/0.1.0/hpdet_coco_hg.hdf5')
 
 
 def normalize_image(image):
@@ -38,7 +42,8 @@ def normalize_image(image):
   return ((np.float32(image) / 255.) - mean) / std
 
 
-def HourglassNetwork(heads, num_stacks, cnv_dim=256, inres=(512, 512), weights='coco', dims=[256, 384, 384, 384, 512]):
+def HourglassNetwork(heads, num_stacks, cnv_dim=256, inres=(512, 512), weights='ctdet_coco',
+                     dims=[256, 384, 384, 384, 512]):
   """Instantiates the Hourglass architecture.
   Optionally loads weights pre-trained on COCO.
   Note that the data format convention used by the model is
@@ -48,7 +53,8 @@ def HourglassNetwork(heads, num_stacks, cnv_dim=256, inres=(512, 512), weights='
       cnv_dim: number of filters after the resolution is decreased.
       inres: network input shape, should be a multiple of 128.
       weights: one of `None` (random initialization),
-            'coco' (pre-training on COCO),
+            'ctdet_coco' (pre-training on COCO for 2D object detection),
+            'hpdet_coco' (pre-training on COCO for human pose detection),
             or the path to the weights file to be loaded.
       dims: numbers of channels in the hourglass blocks.
   # Returns
@@ -57,10 +63,10 @@ def HourglassNetwork(heads, num_stacks, cnv_dim=256, inres=(512, 512), weights='
       ValueError: in case of invalid argument for `weights`,
           or invalid input shape.
   """
-  if not (weights in {'coco', None} or os.path.exists(weights)):
+  if not (weights in {'ctdet_coco', 'hpdet_coco', None} or os.path.exists(weights)):
     raise ValueError('The `weights` argument should be either '
-                     '`None` (random initialization), `imagenet` '
-                     '(pre-training on ImageNet), '
+                     '`None` (random initialization), `ctdet_coco` '
+                     '(pre-trained on COCO), `hpdet_coco` (pre-trained on COCO) '
                      'or the path to the weights file to be loaded.')
   input_layer = Input(shape=(inres[0], inres[1], 3), name='HGInput')
   inter = pre(input_layer, cnv_dim)
@@ -82,15 +88,22 @@ def HourglassNetwork(heads, num_stacks, cnv_dim=256, inres=(512, 512), weights='
       inter = residual(inter, cnv_dim, 'inters.%d' % i)
 
   model = Model(inputs=input_layer, outputs=outputs)
-  if weights == 'coco':
+  if weights == 'ctdet_coco':
     weights_path = get_file(
-      'ctdet_coco_hg.hdf5',
-      COCO_WEIGTHS_PATH,
+      '%s_hg.hdf5' % weights,
+      CTDET_COCO_WEIGHTS_PATH,
       cache_subdir='models',
       file_hash='ce01e92f75b533e3ff8e396c76d55d97ff3ec27e99b1bdac1d7b0d6dcf5d90eb')
     model.load_weights(weights_path)
-  elif weights is not None:
+  elif weights == 'hpdet_coco':
+    weights_path = get_file(
+      '%s_hg.hdf5' % weights,
+      HPDET_COCO_WEIGHTS_PATH,
+      cache_subdir='models',
+      file_hash='5c562ee22dc383080629dae975f269d62de3a41da6fd0c821085fbee183d555d')
     model.load_weights(weights_path)
+  elif weights is not None:
+    model.load_weights(weights)
 
   return model
 
@@ -189,7 +202,7 @@ def right_features(leftfeatures, hgid, dims):
   for kk in reversed(range(len(dims))):
     pow_str = ''
     for _ in range(kk):
-      pow_str += '.center'
+      pow_str += 'center.'
     rf = connect_left_right(leftfeatures[kk], rf, dims[kk], dims[max(kk - 1, 0)], name='kps.%d.%s' % (hgid, pow_str))
   return rf
 
@@ -203,3 +216,19 @@ def create_heads(heads, rf1, hgid):
     _x = Conv2D(num_channels, 1, use_bias=True, name=head + '.%d.1' % hgid)(_x)
     _heads.append(_x)
   return _heads
+
+
+if __name__ == '__main__':
+  kwargs = {
+    'num_stacks': 2,
+    'cnv_dim': 256,
+    'inres': (512, 512),
+  }
+  heads = {
+    'hm': 80,
+    'reg': 2,
+    'wh': 2
+  }
+  model = HourglassNetwork(heads=heads, **kwargs)
+  print(model.summary(line_length=200))
+  # from IPython import embed; embed()
