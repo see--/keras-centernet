@@ -77,11 +77,11 @@ def HourglassNetwork(heads, num_stacks, cnv_dim=256, inres=(512, 512), weights='
     _heads, inter = hourglass_module(heads, inter, cnv_dim, i, dims)
     outputs.extend(_heads)
     if i < num_stacks - 1:
-      inter_ = Conv2D(cnv_dim, 1, use_bias=False, name='inter_.%d.0' % i)(prev_inter)
-      inter_ = BatchNormalization(epsilon=1e-5, name='inter_.%d.1' % i)(inter_)
+      inter_ = Conv2D(cnv_dim, 1, use_bias=False, name='inters_.%d.0' % i)(prev_inter)
+      inter_ = BatchNormalization(epsilon=1e-5, name='inters_.%d.1' % i)(inter_)
 
-      cnv_ = Conv2D(cnv_dim, 1, use_bias=False, name='cnv_.%d.0' % i)(inter)
-      cnv_ = BatchNormalization(epsilon=1e-5, name='cnv_.%d.1' % i)(cnv_)
+      cnv_ = Conv2D(cnv_dim, 1, use_bias=False, name='cnvs_.%d.0' % i)(inter)
+      cnv_ = BatchNormalization(epsilon=1e-5, name='cnvs_.%d.1' % i)(cnv_)
 
       inter = Add(name='inters.%d.inters.add' % i)([inter_, cnv_])
       inter = Activation('relu', name='inters.%d.inters.relu' % i)(inter)
@@ -103,7 +103,7 @@ def HourglassNetwork(heads, num_stacks, cnv_dim=256, inres=(512, 512), weights='
       file_hash='5c562ee22dc383080629dae975f269d62de3a41da6fd0c821085fbee183d555d')
     model.load_weights(weights_path)
   elif weights is not None:
-    model.load_weights(weights)
+    model.load_weights(weights,by_name=True)
 
   return model
 
@@ -143,9 +143,9 @@ def residual(_x, out_dim, name, stride=1):
   _x = BatchNormalization(epsilon=1e-5, name=name + '.bn2')(_x)
 
   if num_channels != out_dim or stride != 1:
-    shortcut = Conv2D(out_dim, 1, strides=stride, use_bias=False, name=name + '.shortcut.0')(
+    shortcut = Conv2D(out_dim, 1, strides=stride, use_bias=False, name=name + '.skip.0')(
         shortcut)
-    shortcut = BatchNormalization(epsilon=1e-5, name=name + '.shortcut.1')(shortcut)
+    shortcut = BatchNormalization(epsilon=1e-5, name=name + '.skip.1')(shortcut)
 
   _x = Add(name=name + '.add')([_x, shortcut])
   _x = Activation('relu', name=name + '.relu')(_x)
@@ -167,29 +167,29 @@ def left_features(bottom, hgid, dims):
   for kk, nh in enumerate(dims):
     pow_str = ''
     for _ in range(kk):
-      pow_str += '.center'
-    _x = residual(features[-1], nh, name='kps.%d%s.down.0' % (hgid, pow_str), stride=2)
-    _x = residual(_x, nh, name='kps.%d%s.down.1' % (hgid, pow_str))
+      pow_str += '.low2'
+    _x = residual(features[-1], nh, name='kps.%d%s.low1.0' % (hgid, pow_str), stride=2)
+    _x = residual(_x, nh, name='kps.%d%s.low1.1' % (hgid, pow_str))
     features.append(_x)
   return features
 
 
 def connect_left_right(left, right, num_channels, num_channels_next, name):
   # left: 2 residual modules
-  left = residual(left, num_channels_next, name=name + 'skip.0')
-  left = residual(left, num_channels_next, name=name + 'skip.1')
+  left = residual(left, num_channels_next, name=name + 'up1.0')
+  left = residual(left, num_channels_next, name=name + 'up1.1')
 
   # up: 2 times residual & nearest neighbour
-  out = residual(right, num_channels, name=name + 'out.0')
-  out = residual(out, num_channels_next, name=name + 'out.1')
-  out = UpSampling2D(name=name + 'out.upsampleNN')(out)
-  out = Add(name=name + 'out.add')([left, out])
+  out = residual(right, num_channels, name=name + 'low3.0')
+  out = residual(out, num_channels_next, name=name + 'low3.1')
+  out = UpSampling2D(name=name + 'low3.upsampleNN')(out)
+  out = Add(name=name + 'low3.add')([left, out])
   return out
 
 
 def bottleneck_layer(_x, num_channels, hgid):
   # 4 residual blocks with 512 channels in the middle
-  pow_str = 'center.' * 5
+  pow_str = 'low2.' * 5
   _x = residual(_x, num_channels, name='kps.%d.%s0' % (hgid, pow_str))
   _x = residual(_x, num_channels, name='kps.%d.%s1' % (hgid, pow_str))
   _x = residual(_x, num_channels, name='kps.%d.%s2' % (hgid, pow_str))
@@ -202,7 +202,7 @@ def right_features(leftfeatures, hgid, dims):
   for kk in reversed(range(len(dims))):
     pow_str = ''
     for _ in range(kk):
-      pow_str += 'center.'
+      pow_str += 'low2.'
     rf = connect_left_right(leftfeatures[kk], rf, dims[kk], dims[max(kk - 1, 0)], name='kps.%d.%s' % (hgid, pow_str))
   return rf
 
